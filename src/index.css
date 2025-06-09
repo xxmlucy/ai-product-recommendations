@@ -56,6 +56,11 @@ body {
 .focus\:ring-blue-500:focus { --tw-ring-opacity: 1; --tw-ring-color: rgb(59 130 246 / var(--tw-ring-opacity)); }
 .bg-red-50 { background-color: #fef2f2; }
 .border-red-200 { border-color: #fecaca; }
+.bg-yellow-50 { background-color: #fefce8; }
+.border-yellow-200 { border-color: #fde047; }
+.text-yellow-800 { color: #92400e; }
+.text-yellow-700 { color: #a16207; }
+.text-yellow-600 { color: #ca8a04; }
 .rounded-md { border-radius: 0.375rem; }
 .p-4 { padding: 1rem; }
 .text-red-800 { color: #991b1b; }

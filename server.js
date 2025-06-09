@@ -33,6 +33,50 @@ app.use(express.static('dist'));
 // Configure multer for file uploads
 const upload = multer({ dest: 'uploads/' });
 
+// Demo response generator for public deployment
+function generateDemoResponse(prompt, modelKey) {
+  const productMatch = prompt.match(/Based on this product: "([^"]+)"/);
+  const product = productMatch ? productMatch[1] : 'Unknown Product';
+
+  const demoResponses = {
+    'gpt-4.1': [
+      `For ${product}, I recommend: 1) Complementary accessories that enhance functionality, 2) Similar products from trusted brands, 3) Maintenance or care items, 4) Upgraded versions with additional features, 5) Bundle deals that offer better value.`,
+      `Based on ${product}, consider: 1) Related items that customers frequently buy together, 2) Seasonal alternatives, 3) Premium versions with enhanced quality, 4) Eco-friendly alternatives, 5) Smart/connected versions if available.`
+    ],
+    'gpt-4o': [
+      `Recommendations for ${product}: 1) Essential accessories for optimal use, 2) Comparable products with different features, 3) Professional-grade alternatives, 4) Budget-friendly options, 5) Limited edition or designer versions.`,
+      `For ${product} users, I suggest: 1) Protective cases or covers, 2) Cleaning and maintenance supplies, 3) Upgrade components, 4) Compatible accessories, 5) Extended warranty options.`
+    ],
+    'gpt-o3': [
+      `${product} recommendations: 1) Multi-functional alternatives, 2) Space-saving versions, 3) Energy-efficient models, 4) Customizable options, 5) Professional installation services.`,
+      `Considering ${product}, explore: 1) Next-generation models, 2) Refurbished options for savings, 3) Rental alternatives, 4) DIY kits, 5) Educational resources and tutorials.`
+    ],
+    'claude-3.7': [
+      `For ${product}, thoughtful recommendations include: 1) Ergonomic improvements, 2) Sustainable alternatives, 3) Multi-purpose solutions, 4) Travel-friendly versions, 5) Community-recommended brands.`,
+      `${product} suggestions: 1) User-reviewed top picks, 2) Innovation-focused alternatives, 3) Value-engineered options, 4) Artisan or handcrafted versions, 5) Local marketplace finds.`
+    ],
+    'claude-sonnet-4': [
+      `Curated ${product} recommendations: 1) Award-winning designs, 2) Customer satisfaction leaders, 3) Emerging brand innovations, 4) Vintage or retro alternatives, 5) Subscription-based services.`,
+      `For ${product} enthusiasts: 1) Expert-recommended upgrades, 2) Collaborative or sharing options, 3) Modular systems, 4) Smart home integration, 5) Health and wellness focused alternatives.`
+    ],
+    'claude-opus-4': [
+      `Premium ${product} selections: 1) Luxury market leaders, 2) Innovative startups, 3) Sustainable manufacturing, 4) Personalization options, 5) Exclusive member benefits.`,
+      `${product} ecosystem: 1) Complementary technology, 2) Service partnerships, 3) Educational workshops, 4) Community forums, 5) Expert consultation services.`
+    ],
+    'deepseek-chat': [
+      `${product} analysis suggests: 1) Data-driven top performers, 2) Trend-based predictions, 3) Algorithm-optimized choices, 4) User behavior insights, 5) Market efficiency leaders.`,
+      `Deep insights for ${product}: 1) Performance metrics leaders, 2) Cost-benefit optimized, 3) Future-proof investments, 4) Integration capabilities, 5) Scalability considerations.`
+    ],
+    'deepseek-coder': [
+      `Technical ${product} recommendations: 1) API-compatible solutions, 2) Open-source alternatives, 3) Developer-friendly tools, 4) Automation possibilities, 5) Integration frameworks.`,
+      `${product} tech stack: 1) Programmable interfaces, 2) Cloud-native options, 3) Microservice architecture, 4) DevOps integration, 5) Monitoring and analytics tools.`
+    ]
+  };
+
+  const responses = demoResponses[modelKey] || demoResponses['gpt-4o'];
+  return responses[Math.floor(Math.random() * responses.length)] + ' [DEMO MODE - Real API keys required for actual AI responses]';
+}
+
 // AI Model configurations
 const AI_MODELS = {
   'gpt-4.1': { provider: 'openai', model: 'gpt-4-turbo' },
@@ -62,7 +106,20 @@ const anthropic = new Anthropic({
 async function callAIModel(modelKey, prompt, retries = 3) {
   const config = AI_MODELS[modelKey];
 
-  // Check if API keys are available
+  // Demo mode - return fake responses if no API keys are configured
+  const hasApiKeys = (
+    (config.provider === 'openai' && process.env.OPENAI_API_KEY) ||
+    (config.provider === 'anthropic' && process.env.ANTHROPIC_API_KEY) ||
+    (config.provider === 'deepseek' && process.env.DEEPSEEK_API_KEY)
+  );
+
+  if (!hasApiKeys) {
+    // Return demo response
+    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000)); // Simulate API delay
+    return generateDemoResponse(prompt, modelKey);
+  }
+
+  // Check if API keys are available for real calls
   if (config.provider === 'openai' && !process.env.OPENAI_API_KEY) {
     throw new Error('OpenAI API key not configured');
   }
@@ -292,14 +349,20 @@ app.get('/api/status', (_req, res) => {
     deepseek: !!process.env.DEEPSEEK_API_KEY
   };
 
-  const availableModels = Object.entries(AI_MODELS).filter(([_key, config]) => {
-    return status[config.provider];
-  }).map(([modelKey]) => modelKey);
+  const hasAnyApiKey = status.openai || status.anthropic || status.deepseek;
+
+  // In demo mode, all models are "available"
+  const availableModels = hasAnyApiKey
+    ? Object.entries(AI_MODELS).filter(([_key, config]) => {
+        return status[config.provider];
+      }).map(([modelKey]) => modelKey)
+    : Object.keys(AI_MODELS); // All models available in demo mode
 
   res.json({
     apiKeys: status,
     availableModels,
-    totalModels: Object.keys(AI_MODELS).length
+    totalModels: Object.keys(AI_MODELS).length,
+    demoMode: !hasAnyApiKey
   });
 });
 

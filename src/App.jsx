@@ -141,8 +141,22 @@ function App() {
               <FileUpload onFileSelect={handleFileSelect} selectedFile={selectedFile} />
             </div>
 
+            {/* Demo Mode Notice */}
+            {apiStatus && apiStatus.demoMode && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+                <h3 className="font-semibold text-yellow-800 mb-2">🎮 Demo Mode Active</h3>
+                <p className="text-yellow-700 mb-2">
+                  This is a public demo! The AI responses are simulated examples.
+                  To get real AI recommendations, you would need to configure your own API keys.
+                </p>
+                <p className="text-sm text-yellow-600">
+                  All models are available in demo mode with realistic sample responses.
+                </p>
+              </div>
+            )}
+
             {/* API Status Warning */}
-            {apiStatus && apiStatus.availableModels.length === 0 && (
+            {apiStatus && !apiStatus.demoMode && apiStatus.availableModels.length === 0 && (
               <div className="bg-red-50 border border-red-200 rounded-md p-4">
                 <h3 className="font-semibold text-red-800 mb-2">⚠️ No API Keys Configured</h3>
                 <p className="text-red-700 mb-2">
