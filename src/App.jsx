@@ -24,17 +24,29 @@ function App() {
   const [downloadUrl, setDownloadUrl] = useState(null);
   const [error, setError] = useState(null);
   const [apiStatus, setApiStatus] = useState(null);
+  const [apiStatusLoading, setApiStatusLoading] = useState(true);
   const [socket, setSocket] = useState(null);
 
   // Check API status and initialize socket on component mount
   useEffect(() => {
     const checkApiStatus = async () => {
       try {
+        setApiStatusLoading(true);
         const response = await fetch('/api/status');
         const status = await response.json();
+        console.log('API Status:', status); // Debug log
         setApiStatus(status);
       } catch (err) {
         console.error('Failed to check API status:', err);
+        // Fallback to demo mode if API status fails
+        setApiStatus({
+          apiKeys: { openai: false, anthropic: false, deepseek: false },
+          availableModels: AI_MODELS.map(model => model.id),
+          totalModels: AI_MODELS.length,
+          demoMode: true
+        });
+      } finally {
+        setApiStatusLoading(false);
       }
     };
 
@@ -174,7 +186,12 @@ function App() {
             <div>
               <h2 className="text-xl font-semibold text-gray-800 mb-4">
                 2. Select AI Models
-                {apiStatus && (
+                {apiStatusLoading && (
+                  <span className="text-sm font-normal text-gray-600 ml-2">
+                    (Loading...)
+                  </span>
+                )}
+                {apiStatus && !apiStatusLoading && (
                   <span className="text-sm font-normal text-gray-600 ml-2">
                     ({apiStatus.availableModels.length} of {apiStatus.totalModels} available)
                   </span>
@@ -184,17 +201,24 @@ function App() {
                 <button
                   onClick={handleSelectAllModels}
                   className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-                  disabled={apiStatus && apiStatus.availableModels.length === 0}
+                  disabled={apiStatusLoading || (apiStatus && apiStatus.availableModels && apiStatus.availableModels.length === 0)}
                 >
                   {selectedModels.length === AI_MODELS.length ? 'Deselect All' : 'Select All Models'}
                 </button>
               </div>
-              <ModelSelector
-                models={AI_MODELS}
-                selectedModels={selectedModels}
-                onModelSelect={handleModelSelect}
-                availableModels={apiStatus?.availableModels || []}
-              />
+              {apiStatusLoading ? (
+                <div className="text-center py-8">
+                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                  <p className="text-gray-600 mt-2">Loading AI models...</p>
+                </div>
+              ) : (
+                <ModelSelector
+                  models={AI_MODELS}
+                  selectedModels={selectedModels}
+                  onModelSelect={handleModelSelect}
+                  availableModels={apiStatus?.availableModels || AI_MODELS.map(model => model.id)}
+                />
+              )}
             </div>
 
             {/* Iterations Section */}
