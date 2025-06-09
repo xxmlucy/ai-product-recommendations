@@ -103,21 +103,32 @@ function App() {
     }
 
     try {
+      console.log('Sending upload request...');
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
       if (!response.ok) {
+        const errorText = await response.text();
+        console.log('Error response:', errorText);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const contentType = response.headers.get('content-type');
+      console.log('Content-Type:', contentType);
+
       if (!contentType || !contentType.includes('application/json')) {
+        const responseText = await response.text();
+        console.log('Non-JSON response:', responseText);
         throw new Error('Server returned non-JSON response');
       }
 
       const result = await response.json();
+      console.log('Success result:', result);
 
       if (result.success) {
         setDownloadUrl(result.downloadUrl);

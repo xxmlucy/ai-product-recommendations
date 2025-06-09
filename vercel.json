@@ -18,7 +18,19 @@
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
+      "src": "/api/status",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/api/test",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/api/upload",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/socket.io/(.*)",
       "dest": "/server.js"
     },
     {
