@@ -37,49 +37,42 @@ const upload = multer({
   }
 });
 
-// Demo response generator for public deployment
 function generateDemoResponse(prompt, modelKey) {
-  const productMatch = prompt.match(/Based on this product: "([^"]+)"/);
+  const productMatch = prompt.match(/What are the top 5 brands for (.+?)\?/);
   const product = productMatch ? productMatch[1] : 'Unknown Product';
 
   const demoResponses = {
     'gpt-4.1': [
-      `For ${product}, I recommend: 1) Complementary accessories that enhance functionality, 2) Similar products from trusted brands, 3) Maintenance or care items, 4) Upgraded versions with additional features, 5) Bundle deals that offer better value.`,
-      `Based on ${product}, consider: 1) Related items that customers frequently buy together, 2) Seasonal alternatives, 3) Premium versions with enhanced quality, 4) Eco-friendly alternatives, 5) Smart/connected versions if available.`
+      `BrandA, BrandB, BrandC, BrandD, BrandE`,
+      `BrandX, BrandY, BrandZ, BrandAlpha, BrandBeta`
     ],
     'gpt-4o': [
-      `Recommendations for ${product}: 1) Essential accessories for optimal use, 2) Comparable products with different features, 3) Professional-grade alternatives, 4) Budget-friendly options, 5) Limited edition or designer versions.`,
-      `For ${product} users, I suggest: 1) Protective cases or covers, 2) Cleaning and maintenance supplies, 3) Upgrade components, 4) Compatible accessories, 5) Extended warranty options.`
+      `Brand1, Brand2, Brand3, Brand4, Brand5`
     ],
     'gpt-o3': [
-      `${product} recommendations: 1) Multi-functional alternatives, 2) Space-saving versions, 3) Energy-efficient models, 4) Customizable options, 5) Professional installation services.`,
-      `Considering ${product}, explore: 1) Next-generation models, 2) Refurbished options for savings, 3) Rental alternatives, 4) DIY kits, 5) Educational resources and tutorials.`
+      `EcoBrand, MegaTools, SafeWare, UltraTech, HomePro`
     ],
     'claude-3.7': [
-      `For ${product}, thoughtful recommendations include: 1) Ergonomic improvements, 2) Sustainable alternatives, 3) Multi-purpose solutions, 4) Travel-friendly versions, 5) Community-recommended brands.`,
-      `${product} suggestions: 1) User-reviewed top picks, 2) Innovation-focused alternatives, 3) Value-engineered options, 4) Artisan or handcrafted versions, 5) Local marketplace finds.`
+      `PrecisionX, GreenLine, NovaBuilt, Zenith, CoreCraft`
     ],
     'claude-sonnet-4': [
-      `Curated ${product} recommendations: 1) Award-winning designs, 2) Customer satisfaction leaders, 3) Emerging brand innovations, 4) Vintage or retro alternatives, 5) Subscription-based services.`,
-      `For ${product} enthusiasts: 1) Expert-recommended upgrades, 2) Collaborative or sharing options, 3) Modular systems, 4) Smart home integration, 5) Health and wellness focused alternatives.`
+      `PrimeCraft, TechEdge, Endura, MaxHaus, VisionPro`
     ],
     'claude-opus-4': [
-      `Premium ${product} selections: 1) Luxury market leaders, 2) Innovative startups, 3) Sustainable manufacturing, 4) Personalization options, 5) Exclusive member benefits.`,
-      `${product} ecosystem: 1) Complementary technology, 2) Service partnerships, 3) Educational workshops, 4) Community forums, 5) Expert consultation services.`
+      `Artisan+, Vertex, OmegaCo, Nexa, Futura`
     ],
     'deepseek-chat': [
-      `${product} analysis suggests: 1) Data-driven top performers, 2) Trend-based predictions, 3) Algorithm-optimized choices, 4) User behavior insights, 5) Market efficiency leaders.`,
-      `Deep insights for ${product}: 1) Performance metrics leaders, 2) Cost-benefit optimized, 3) Future-proof investments, 4) Integration capabilities, 5) Scalability considerations.`
+      `StratIQ, ClearEdge, BuildMate, AlphaPrime, SolidPro`
     ],
     'deepseek-coder': [
-      `Technical ${product} recommendations: 1) API-compatible solutions, 2) Open-source alternatives, 3) Developer-friendly tools, 4) Automation possibilities, 5) Integration frameworks.`,
-      `${product} tech stack: 1) Programmable interfaces, 2) Cloud-native options, 3) Microservice architecture, 4) DevOps integration, 5) Monitoring and analytics tools.`
+      `DevToolX, IntegrateX, OpenFrame, CodeCraft, ModularLogic`
     ]
   };
 
   const responses = demoResponses[modelKey] || demoResponses['gpt-4o'];
   return responses[Math.floor(Math.random() * responses.length)] + ' [DEMO MODE - Real API keys required for actual AI responses]';
 }
+
 
 // AI Model configurations
 const AI_MODELS = {
@@ -270,7 +263,7 @@ app.post('/api/upload', upload.single('csvFile'), async (req, res) => {
 
     for (const row of csvData) {
       const productInfo = Object.values(row).join(', ');
-      const prompt = `Based on this product: "${productInfo}", provide 3-5 specific product recommendations with brief explanations. Focus on similar or complementary products that customers who buy this item might also be interested in. Include product names and short reasons for each recommendation.`;
+      const prompt = `You are a helpful assistant who provides concise, high-quality recommendations.\nWhat are the top 5 brands for ${productInfo}? Provide only the brand names separated by commas with no additional text.`;
 
       for (const modelKey of models) {
         for (let i = 0; i < iterationCount; i++) {
