@@ -3,7 +3,6 @@ import multer from 'multer';
 import cors from 'cors';
 import csv from 'csv-parser';
 import XLSX from 'xlsx';
-import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
@@ -30,8 +29,13 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('dist'));
 
-// Configure multer for file uploads
-const upload = multer({ dest: 'uploads/' });
+// Configure multer for file uploads (memory storage for serverless)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  }
+});
 
 // Demo response generator for public deployment
 function generateDemoResponse(prompt, modelKey) {
@@ -174,11 +178,15 @@ async function callAIModel(modelKey, prompt, retries = 3) {
   }
 }
 
-// Parse CSV file
-function parseCSV(filePath) {
+// Parse CSV from buffer
+import { Readable } from 'stream';
+
+function parseCSV(buffer) {
   return new Promise((resolve, reject) => {
     const results = [];
-    fs.createReadStream(filePath)
+
+    const stream = Readable.from(buffer.toString());
+    stream
       .pipe(csv())
       .on('data', (data) => results.push(data))
       .on('end', () => resolve(results))
@@ -186,12 +194,12 @@ function parseCSV(filePath) {
   });
 }
 
-// Generate Excel file
-function generateExcel(data, outputPath) {
+// Generate Excel buffer
+function generateExcel(data) {
   const workbook = XLSX.utils.book_new();
   const worksheet = XLSX.utils.json_to_sheet(data);
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Recommendations');
-  XLSX.writeFile(workbook, outputPath);
+  return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
 }
 
 // Socket.IO connection handling
@@ -229,8 +237,8 @@ app.post('/api/upload', upload.single('csvFile'), async (req, res) => {
 
     const iterationCount = parseInt(iterations) || 1;
 
-    // Parse CSV
-    const csvData = await parseCSV(req.file.path);
+    // Parse CSV from memory buffer
+    const csvData = await parseCSV(req.file.buffer);
     
     // Process recommendations
     const results = [];
@@ -299,37 +307,24 @@ app.post('/api/upload', upload.single('csvFile'), async (req, res) => {
       status: 'Processing complete! Generating Excel file...'
     });
 
-    // Generate Excel file
+    // Generate Excel buffer
+    const excelBuffer = generateExcel(results);
     const outputFileName = `recommendations_${Date.now()}.xlsx`;
-    const outputPath = path.join(__dirname, 'outputs', outputFileName);
-    
-    // Ensure outputs directory exists
-    if (!fs.existsSync(path.join(__dirname, 'outputs'))) {
-      fs.mkdirSync(path.join(__dirname, 'outputs'));
-    }
 
-    generateExcel(results, outputPath);
-
-    // Clean up uploaded file
-    fs.unlinkSync(req.file.path);
+    // Return Excel file directly
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${outputFileName}"`);
+    res.setHeader('Content-Length', excelBuffer.length);
 
     res.json({
       success: true,
-      downloadUrl: `/api/download/${outputFileName}`,
+      downloadUrl: `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${excelBuffer.toString('base64')}`,
+      filename: outputFileName,
       totalRecommendations: results.length
     });
 
   } catch (error) {
     console.error('Processing error:', error);
-
-    // Clean up uploaded file if it exists
-    if (req.file && fs.existsSync(req.file.path)) {
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch (cleanupError) {
-        console.error('Error cleaning up file:', cleanupError);
-      }
-    }
 
     // Ensure we always return JSON
     if (!res.headersSent) {
@@ -366,21 +361,7 @@ app.get('/api/status', (_req, res) => {
   });
 });
 
-app.get('/api/download/:filename', (req, res) => {
-  const filename = req.params.filename;
-  const filePath = path.join(__dirname, 'outputs', filename);
-  
-  if (fs.existsSync(filePath)) {
-    res.download(filePath, filename, (err) => {
-      if (err) {
-        console.error('Download error:', err);
-        res.status(500).json({ error: 'Download failed' });
-      }
-    });
-  } else {
-    res.status(404).json({ error: 'File not found' });
-  }
-});
+// Download endpoint removed - files are now returned directly in the upload response
 
 // Serve React app for all other routes
 app.get('*', (_req, res) => {

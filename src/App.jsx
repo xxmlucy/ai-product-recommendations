@@ -121,6 +121,15 @@ function App() {
 
       if (result.success) {
         setDownloadUrl(result.downloadUrl);
+        // Auto-download the file
+        if (result.downloadUrl && result.filename) {
+          const link = document.createElement('a');
+          link.href = result.downloadUrl;
+          link.download = result.filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
       } else {
         setError(result.error || 'Processing failed');
       }
@@ -262,13 +271,20 @@ function App() {
             {downloadUrl && (
               <div className="bg-green-50 border border-green-200 rounded-md p-4">
                 <p className="text-green-800 mb-2">Processing completed successfully!</p>
-                <a
-                  href={downloadUrl}
-                  download
+                <p className="text-green-700 mb-3">Your Excel file has been automatically downloaded. If it didn't start, click the button below:</p>
+                <button
+                  onClick={() => {
+                    const link = document.createElement('a');
+                    link.href = downloadUrl;
+                    link.download = `recommendations_${Date.now()}.xlsx`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }}
                   className="inline-block px-6 py-3 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
                 >
                   Download Excel Results
-                </a>
+                </button>
               </div>
             )}
 
