@@ -211,23 +211,36 @@ io.on('connection', (socket) => {
   });
 });
 
+// Test endpoint
+app.get('/api/test', (_req, res) => {
+  res.json({ message: 'API is working', timestamp: new Date().toISOString() });
+});
+
 // API Routes
 app.post('/api/upload', upload.single('csvFile'), async (req, res) => {
+  console.log('Upload request received');
+  console.log('File:', req.file ? 'Present' : 'Missing');
+  console.log('Body:', req.body);
+
   try {
     if (!req.file) {
+      console.log('No file uploaded');
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const { selectedModels, iterations, socketId } = req.body;
+    const { selectedModels, iterations } = req.body;
 
     if (!selectedModels) {
+      console.log('No models selected');
       return res.status(400).json({ error: 'No models selected' });
     }
 
     let models;
     try {
       models = JSON.parse(selectedModels);
+      console.log('Parsed models:', models);
     } catch (parseError) {
+      console.log('JSON parse error:', parseError);
       return res.status(400).json({ error: 'Invalid models format' });
     }
 
@@ -311,11 +324,7 @@ app.post('/api/upload', upload.single('csvFile'), async (req, res) => {
     const excelBuffer = generateExcel(results);
     const outputFileName = `recommendations_${Date.now()}.xlsx`;
 
-    // Return Excel file directly
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename="${outputFileName}"`);
-    res.setHeader('Content-Length', excelBuffer.length);
-
+    // Return JSON response with base64 data
     res.json({
       success: true,
       downloadUrl: `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${excelBuffer.toString('base64')}`,
